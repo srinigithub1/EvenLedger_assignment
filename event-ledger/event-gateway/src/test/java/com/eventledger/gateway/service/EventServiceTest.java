@@ -7,9 +7,9 @@ import com.eventledger.gateway.dto.EventRequest;
 import com.eventledger.gateway.exception.EventNotFoundException;
 import com.eventledger.gateway.repository.EventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -38,8 +38,18 @@ class EventServiceTest {
     @Mock
     private AccountServiceClient accountServiceClient;
 
-    @InjectMocks
+    // Use a real in-memory registry rather than a mock so the counters created in
+    // the EventService constructor are real (no null-counter NPEs). The service is
+    // constructed manually in setUp() to avoid @InjectMocks ordering issues.
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry =
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+
     private EventService eventService;
+
+    @BeforeEach
+    void setUp() {
+        eventService = new EventService(eventRepository, objectMapper, accountServiceClient, meterRegistry);
+    }
 
     private EventRequest newRequest(String eventId) {
         EventRequest request = new EventRequest();

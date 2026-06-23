@@ -40,10 +40,12 @@ public class EventService {
 
     @Transactional(noRollbackFor = AccountServiceUnavailableException.class)
     public EventSubmitResult submitEvent(EventRequest request) {
+        eventsReceivedCounter.increment();
         // Idempotency guard: a known eventId is returned as-is and the transaction
         // is never re-applied to the account.
         Optional<Event> existing = eventRepository.findByEventId(request.getEventId());
         if (existing.isPresent()) {
+            eventsDuplicateCounter.increment();
             return new EventSubmitResult(existing.get(), true);
         }
 
@@ -75,6 +77,7 @@ public class EventService {
             saved = eventRepository.save(saved);
             return new EventSubmitResult(saved, false);
         } catch (AccountServiceUnavailableException e) {
+            accountServiceFailureCounter.increment();
             saved.setStatus("FAILED");
             eventRepository.save(saved);
             throw e;
