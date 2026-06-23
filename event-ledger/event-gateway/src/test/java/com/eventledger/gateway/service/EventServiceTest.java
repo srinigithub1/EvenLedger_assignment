@@ -1,5 +1,6 @@
 package com.eventledger.gateway.service;
 
+import com.eventledger.gateway.client.AccountServiceClient;
 import com.eventledger.gateway.domain.Event;
 import com.eventledger.gateway.domain.EventType;
 import com.eventledger.gateway.dto.EventRequest;
@@ -33,6 +34,9 @@ class EventServiceTest {
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private AccountServiceClient accountServiceClient;
 
     @InjectMocks
     private EventService eventService;
@@ -68,9 +72,12 @@ class EventServiceTest {
 
         EventSubmitResult result = eventService.submitEvent(request);
 
-        verify(eventRepository, times(1)).save(any(Event.class));
+        // Event is saved twice: once as PENDING before the downstream call, then
+        // updated to PROCESSED after Account Service succeeds.
+        verify(eventRepository, times(2)).save(any(Event.class));
         assertThat(result.isDuplicate()).isFalse();
         assertThat(result.getEvent().getEventId()).isEqualTo("evt-001");
+        assertThat(result.getEvent().getStatus()).isEqualTo("PROCESSED");
     }
 
     @Test
