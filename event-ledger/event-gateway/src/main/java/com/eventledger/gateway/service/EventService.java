@@ -9,6 +9,8 @@ import com.eventledger.gateway.exception.EventNotFoundException;
 import com.eventledger.gateway.repository.EventRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,12 +24,18 @@ public class EventService {
     private final EventRepository eventRepository;
     private final ObjectMapper objectMapper;
     private final AccountServiceClient accountServiceClient;
+    private final Counter eventsReceivedCounter;
+    private final Counter eventsDuplicateCounter;
+    private final Counter accountServiceFailureCounter;
 
     public EventService(EventRepository eventRepository, ObjectMapper objectMapper,
-            AccountServiceClient accountServiceClient) {
+            AccountServiceClient accountServiceClient, MeterRegistry meterRegistry) {
         this.eventRepository = eventRepository;
         this.objectMapper = objectMapper;
         this.accountServiceClient = accountServiceClient;
+        this.eventsReceivedCounter = meterRegistry.counter("events.received.total");
+        this.eventsDuplicateCounter = meterRegistry.counter("events.received.duplicate");
+        this.accountServiceFailureCounter = meterRegistry.counter("account.service.call.failure");
     }
 
     @Transactional(noRollbackFor = AccountServiceUnavailableException.class)

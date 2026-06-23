@@ -4,6 +4,7 @@ import com.eventledger.gateway.exception.AccountServiceUnavailableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +37,12 @@ public class AccountServiceClient {
         String url = baseUrl + "/accounts/" + accountId + "/transactions";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        // Trace ID propagation will be added in Phase 5
+        // Propagate the current request's trace ID to the downstream Account Service
+        // so both services log under the same traceId.
+        String traceId = MDC.get("traceId");
+        if (traceId != null) {
+            headers.set("X-Trace-Id", traceId);
+        }
         HttpEntity<AccountTransactionRequest> entity = new HttpEntity<>(request, headers);
         ResponseEntity<AccountTransactionResponse> response =
                 restTemplate.postForEntity(url, entity, AccountTransactionResponse.class);
